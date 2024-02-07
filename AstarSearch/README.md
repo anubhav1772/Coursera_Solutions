@@ -1,4 +1,4 @@
-###A* Path Planning Alogithm   
+### A* Path Planning Alogithm   
 
 Given a graph, the start node, and the goal node, the program will search the graph for a minimum-cost path from the start to the goal. 
 
