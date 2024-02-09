@@ -4,6 +4,9 @@ import random
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
+plt.xlim( -0.8 , 0.8 )
+plt.ylim( -0.8 , 0.8 )
+
 class Obstacle:
 
 	def __init__(self, x, y, radius):
@@ -28,12 +31,24 @@ class PRM:
 		self.goal = (0.5, 0.5)
 		self.roadmap = Graph()
 
-	def readObstaclesCSV(self, filepath="obstacles.csv"):
+	def readObstaclesCSV(self, filepath="Input/obstacles.csv"):
 		with open(filepath, mode='r') as file:
 			csvFile = csv.reader(file)
 			for lines in csvFile:
 				if str.__contains__(lines[0], '#') == False:
 					self.obstacles.append(Obstacle(float(lines[0]), float(lines[1]), float(lines[2])/2.0))
+					self.addCircleToGrid(float(lines[0]), float(lines[1]), float(lines[2])/2.0)
+
+	def addCircleToGrid(self, x, y, r, color='b'):
+		circle = plt.Circle((x, y), r, color=color, alpha=0.5)
+		plt.gca().add_patch(circle)
+
+	def addStartAndGoalStateToGrid(self):
+		self.addCircleToGrid(float(self.start[0]), float(self.start[1]), 0.01)
+		plt.text(float(self.start[0]), float(self.start[1]), 'Start')
+
+		self.addCircleToGrid(float(self.goal[0]), float(self.goal[1]), 0.01, color='orange')
+		plt.text(float(self.goal[0]), float(self.goal[1]), 'Goal')
 
 	def IsInFreeSpace(self, x, y):
 		for obstacle in self.obstacles:
@@ -45,9 +60,7 @@ class PRM:
 
 			if(cond <= 0): # condition for a point to lie inside|on the circle (intersecting with obstacle)
 				return False
-
 		return True
-
 
 	def generate_random_samples(self, N):
 		# Generate N random samples within the square [-0.5, 0.5] x [-0.5, 0.5]
@@ -57,7 +70,10 @@ class PRM:
 			y = round(random.uniform(-0.5, 0.5), 1)
 			if(((x, y) not in self.samples) and (self.IsInFreeSpace(x,y))):
 				self.samples.append((x, y))
+				self.addCircleToGrid(x, y, 0.01, color='r')
 				i += 1
+		# Add start and Goal state to the grid as well
+		self.addStartAndGoalStateToGrid()
 
 	def euclideanDistance(self, pt1, pt2):
 		return np.linalg.norm(np.array(pt1) - np.array(pt2))
@@ -101,7 +117,7 @@ class PRM:
 		return False
 
 	def runPRM(self):
-		N = 10
+		N = 25
 		self.generate_random_samples(N)
 
 		for pt in self.samples:
@@ -109,6 +125,7 @@ class PRM:
 			for nbr in neighbors:
 				if not self.isIntersecting(pt, nbr):
 					 #self.roadmap.addEdge(u, v)
+					 plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='red')
 					 print(str(pt) + "->" + str(nbr))
 
 		# Adding start node to the graph (connecting it to the Roadmap)
@@ -119,6 +136,7 @@ class PRM:
 				# samples (sorted based on its distance from start node)
 				# Add the edge to the Roadmap
 				#self.roadmap.addEdge(u, v)
+				plt.plot([self.start[0], nbr[0]], [self.start[1], nbr[1]], color='green')
 				break
 			
 		# Adding goal node to the graph (connecting it to the Roadmap)
@@ -129,6 +147,7 @@ class PRM:
 				# samples (sorted based on its distance from goal node)
 				# Add the edge to the Roadmap
 				#self.roadmap.addEdge(u, v)
+				plt.plot([self.goal[0], nbr[0]], [self.goal[1], nbr[1]], color='green')
 				break
 
 	def printObstacles(self):
@@ -144,15 +163,17 @@ if __name__ == '__main__':
 	prm.readObstaclesCSV()
 	#prm.printObstacles()
 	# Phase 1: Sampling
-	prm.generate_random_samples(10)
-	print(prm.samples)
+	#prm.generate_random_samples(10)
+	
+	#print(prm.samples)
 	# K nearest neighbors
 	# TESTING : K NEAREST NEIGHBORS
 	# print(prm.findKNearestNeigbors(prm.start, 5))
 	# Phase 2: Creating edges
 	# Phase 3: A* Search
 
-	#prm.runPRM()
+	prm.runPRM()
+	plt.show()
 	# TESTING : INTERSECTION OF A LINE WITH OBSTACLE
 	# print(prm.isIntersecting((1, 0), (0, 1)))
 	# print(prm.isIntersecting((2, 0), (0, 2)))
