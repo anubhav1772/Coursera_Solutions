@@ -2,6 +2,7 @@ import csv
 import numpy as np
 import random
 from collections import defaultdict
+import matplotlib.pyplot as plt
 
 class Obstacle:
 
@@ -10,6 +11,14 @@ class Obstacle:
 		self.y = y
 		self.radius = radius
 
+class Graph:
+
+	def __init__(self):
+		self.graph = defaultdict()
+
+	def addEdge(self, u, v):
+		self.graph[u].append(v)
+
 class PRM:
 
 	def __init__(self):
@@ -17,10 +26,7 @@ class PRM:
 		self.samples = []
 		self.start = (-0.5, -0.5)
 		self.goal = (0.5, 0.5)
-		self.edges = defaultdict()
-
-	def euclideanDistance(self, pt1, pt2):
-		return np.linalg.norm(np.array(pt1) - np.array(pt2))
+		self.roadmap = Graph()
 
 	def readObstaclesCSV(self, filepath="obstacles.csv"):
 		with open(filepath, mode='r') as file:
@@ -28,6 +34,38 @@ class PRM:
 			for lines in csvFile:
 				if str.__contains__(lines[0], '#') == False:
 					self.obstacles.append(Obstacle(float(lines[0]), float(lines[1]), float(lines[2])/2.0))
+
+	def IsInFreeSpace(self, x, y):
+		for obstacle in self.obstacles:
+			x1 = obstacle.x
+			y1 = obstacle.y
+			r = obstacle.radius
+
+			cond = (x - x1)*(x - x1) + (y - y1)*(y - y1) - r*r
+
+			if(cond <= 0): # condition for a point to lie inside|on the circle (intersecting with obstacle)
+				return False
+
+		return True
+
+
+	def generate_random_samples(self, N):
+		# Generate N random samples within the square [-0.5, 0.5] x [-0.5, 0.5]
+		i = 0
+		while(i<N):
+			x = round(random.uniform(-0.5, 0.5), 1)
+			y = round(random.uniform(-0.5, 0.5), 1)
+			if(((x, y) not in self.samples) and (self.IsInFreeSpace(x,y))):
+				self.samples.append((x, y))
+				i += 1
+
+	def euclideanDistance(self, pt1, pt2):
+		return np.linalg.norm(np.array(pt1) - np.array(pt2))
+
+	def findKNearestNeigbors(self, pt, K):
+		neighbors = [(point, self.euclideanDistance(pt, point)) for point in self.samples]
+		neighbors.sort(key = lambda x: x[1]) # sort neighbors list based on euclidean distances 
+		return [nbr[0] for nbr in neighbors[:K]]
 
 	def isIntersecting(self, pt1, pt2):
 		#self.obstacles.append(Obstacle(0, 0, 1.0)) => for testing with one obstacle
@@ -62,11 +100,6 @@ class PRM:
 
 		return False
 
-	def findKNearestNeigbors(self, pt, K):
-		neighbors = [(point, self.euclideanDistance(pt, point)) for point in self.samples]
-		neighbors.sort(key = lambda x: x[1]) # sort neighbors list based on euclidean distances 
-		return [nbr[0] for nbr in neighbors[:K]]
-
 	def runPRM(self):
 		N = 10
 		self.generate_random_samples(N)
@@ -75,18 +108,28 @@ class PRM:
 			neighbors = self.findKNearestNeigbors(pt, 5)
 			for nbr in neighbors:
 				if not self.isIntersecting(pt, nbr):
-					 #self.edges[].append()
+					 #self.roadmap.addEdge(u, v)
 					 print(str(pt) + "->" + str(nbr))
 
-	def generate_random_samples(self, N):
-		# Generate N random samples within the square [-0.5, 0.5] x [-0.5, 0.5]
-		i = 0
-		while(i<N):
-			x = round(random.uniform(-0.5, 0.5), 1)
-			y = round(random.uniform(-0.5, 0.5), 1)
-			if((x, y) not in self.samples):
-				self.samples.append((x, y))
-				i += 1
+		# Adding start node to the graph (connecting it to the Roadmap)
+		start_nbrs = self.findKNearestNeigbors(self.start, N)
+		for nbr in start_nbrs:
+			if not self.isIntersecting(self.start, nbr):
+				# non-collision path found from start node to one of the 
+				# samples (sorted based on its distance from start node)
+				# Add the edge to the Roadmap
+				#self.roadmap.addEdge(u, v)
+				break
+			
+		# Adding goal node to the graph (connecting it to the Roadmap)
+		goal_nbrs = self.findKNearestNeigbors(self.goal, N)
+		for nbr in goal_nbrs:
+			if not self.isIntersecting(self.goal, nbr):
+				# non-collision path found from end node to one of the 
+				# samples (sorted based on its distance from goal node)
+				# Add the edge to the Roadmap
+				#self.roadmap.addEdge(u, v)
+				break
 
 	def printObstacles(self):
 		print("Obstacles:")
@@ -101,15 +144,15 @@ if __name__ == '__main__':
 	prm.readObstaclesCSV()
 	#prm.printObstacles()
 	# Phase 1: Sampling
-	#prm.generate_random_samples(10)
-	#print(prm.samples)
+	prm.generate_random_samples(10)
+	print(prm.samples)
 	# K nearest neighbors
 	# TESTING : K NEAREST NEIGHBORS
 	# print(prm.findKNearestNeigbors(prm.start, 5))
 	# Phase 2: Creating edges
 	# Phase 3: A* Search
 
-	prm.runPRM()
+	#prm.runPRM()
 	# TESTING : INTERSECTION OF A LINE WITH OBSTACLE
 	# print(prm.isIntersecting((1, 0), (0, 1)))
 	# print(prm.isIntersecting((2, 0), (0, 2)))
