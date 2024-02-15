@@ -44,10 +44,10 @@ class PRM:
 		plt.gca().add_patch(circle)
 
 	def addStartAndGoalStateToGrid(self):
-		self.addCircleToGrid(float(self.start[0]), float(self.start[1]), 0.01)
+		self.addCircleToGrid(float(self.start[0]), float(self.start[1]), 0.015, color='orange')
 		plt.text(float(self.start[0]), float(self.start[1]), 'Start')
 
-		self.addCircleToGrid(float(self.goal[0]), float(self.goal[1]), 0.01, color='orange')
+		self.addCircleToGrid(float(self.goal[0]), float(self.goal[1]), 0.015, color='orange')
 		plt.text(float(self.goal[0]), float(self.goal[1]), 'Goal')
 
 	def IsInFreeSpace(self, x, y):
@@ -84,9 +84,20 @@ class PRM:
 		return [nbr[0] for nbr in neighbors[:K]]
 
 	def isIntersecting(self, pt1, pt2):
-		#self.obstacles.append(Obstacle(0, 0, 1.0)) => for testing with one obstacle
-		m = (pt2[1] - pt1[1])/(pt2[0] - pt1[0] + 0.0000000001)
-		const = pt1[1] - m*pt1[0] # y = mx + const => const = (y-mx) at pt1|pt2 
+		"""Function to check if the straight path between pt1 and pt2 
+		   is in collision with any of the obstacles
+		:param pt1: (x, y) of point 1
+		:param pt2: (x, y) of point 2
+		:return True (in case of collision) | False (No collision)
+		"""
+		# Intersection of a line(not line segment yet) with the circle
+		if (pt2[0] != pt1[0]):
+			m = (pt2[1] - pt1[1])/(pt2[0] - pt1[0])
+			const = pt1[1] - m*pt1[0] # y = mx + const => const = (y-mx) at pt1||pt2 
+		else:
+			m = np.inf
+			const = np.nan
+
 		for obstacle in self.obstacles:
 			x1 = obstacle.x
 			y1 = obstacle.y
@@ -108,55 +119,52 @@ class PRM:
 				x2 = (-b - np.sqrt(discriminant))/float(2*a)
 				y2 = m*x2 + const
 
+				# Check if the intersection points lie are within the line segment(not line)
 				if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
 					return True
 
 				if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
 					return True
-
 		return False
 
-	def runPRM(self):
-		N = 25
+	def runPRM(self, N, K):
+		# STEP 2.1 : GENERATE SAMPLES FROM FREE CONFIGURATION SPACE
 		self.generate_random_samples(N)
+		edges = []
 
-		for pt in self.samples:
-			neighbors = self.findKNearestNeigbors(pt, 5)
-			for nbr in neighbors:
-				if not self.isIntersecting(pt, nbr):
-					 #self.roadmap.addEdge(u, v)
-					 plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='red')
-					 print(str(pt) + "->" + str(nbr))
-
-		# Adding start node to the graph (connecting it to the Roadmap)
-		start_nbrs = self.findKNearestNeigbors(self.start, N)
+		# STEP 2.1 : ADD START NODE TO THE GRAPH (CONNECTING IT TO THE ROADMAP)
+		start_nbrs = self.findKNearestNeigbors(self.start, K)
 		for nbr in start_nbrs:
 			if not self.isIntersecting(self.start, nbr):
 				# non-collision path found from start node to one of the 
 				# samples (sorted based on its distance from start node)
 				# Add the edge to the Roadmap
-				#self.roadmap.addEdge(u, v)
-				plt.plot([self.start[0], nbr[0]], [self.start[1], nbr[1]], color='green')
+				plt.plot([self.start[0], nbr[0]], [self.start[1], nbr[1]], color='black')
 				break
-			
-		# Adding goal node to the graph (connecting it to the Roadmap)
-		goal_nbrs = self.findKNearestNeigbors(self.goal, N)
+
+		# STEP 2.2 : LOOP THROUGH THE GENERATED SAMPLE NODES
+		for pt in self.samples:
+			# STEP 2.2.1 : FIND K NEAREST NEIGHBORS OF THE NODE
+			neighbors = self.findKNearestNeigbors(pt, K)
+			#print(str(pt)+" "+str(neighbors))
+
+			# STEP 2.2.2 : CHECK FOR COLLISION-FREE PATH
+			for nbr in neighbors:
+				# STEP 2.2.2.1 : IF COLLISION-FREE PATH => APPEND IT TO EDGES LIST
+				if not self.isIntersecting(pt, nbr):
+					plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='blue')
+				else: # STEP 2.2.2.2 : PATH IS COLLIDING WITH ONE OF THE OBSTACLES => DON'T ADD IT TO THE LIST
+					plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='red')
+
+		# STEP 2.3 : ADD GOAL NODE TO THE GRAPH (CONNECTING IT TO THE ROADMAP)
+		goal_nbrs = self.findKNearestNeigbors(self.goal, K)
 		for nbr in goal_nbrs:
 			if not self.isIntersecting(self.goal, nbr):
 				# non-collision path found from end node to one of the 
 				# samples (sorted based on its distance from goal node)
 				# Add the edge to the Roadmap
-				#self.roadmap.addEdge(u, v)
-				plt.plot([self.goal[0], nbr[0]], [self.goal[1], nbr[1]], color='green')
+				plt.plot([self.goal[0], nbr[0]], [self.goal[1], nbr[1]], color='black')
 				break
-
-	def printObstacles(self):
-		print("Obstacles:")
-		for obst in self.obstacles:
-			print(obst.x, obst.y, obst.radius)
-
-		print("##############")
-
 
 if __name__ == '__main__':
 	prm = PRM()
@@ -170,9 +178,10 @@ if __name__ == '__main__':
 	# TESTING : K NEAREST NEIGHBORS
 	# print(prm.findKNearestNeigbors(prm.start, 5))
 	# Phase 2: Creating edges
-	# Phase 3: A* Search
 
-	prm.runPRM()
+	N = 25
+	K = 5
+	prm.runPRM(N, K)
 	plt.show()
 	# TESTING : INTERSECTION OF A LINE WITH OBSTACLE
 	# print(prm.isIntersecting((1, 0), (0, 1)))
