@@ -3,6 +3,7 @@ import numpy as np
 import random
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import math
 
 plt.xlim( -0.8 , 0.8 )
 plt.ylim( -0.8 , 0.8 )
@@ -21,7 +22,7 @@ class PRM:
 		self.samples = []
 		self.start = (-0.5, -0.5) # Start Position
 		self.goal = (0.5, 0.5)    # Goal Position
-		self.thresh_radius = 0.02 
+		self.thresh_radius = 0.05 
 		self.edges = defaultdict(list)
 
 	def readObstaclesCSV(self, filepath="Input/obstacles.csv"):
@@ -89,50 +90,71 @@ class PRM:
 		if (pt2[0] != pt1[0]):
 			m = (pt2[1] - pt1[1])/(pt2[0] - pt1[0])
 			const = pt1[1] - m*pt1[0] # y = mx + const => const = (y-mx) at pt1||pt2 
-		else:
-			m = np.inf
-			const = np.nan
+	
+			for obstacle in self.obstacles:
+				x1 = obstacle.x
+				y1 = obstacle.y
+				r  = obstacle.radius + self.thresh_radius
+				
+				a = (1 + m*m)
+				b = (2*m*const - 2*x1 - 2*y1*m)
+				c = (x1*x1 + const*const + y1*y1 - 2*y1*const - r*r)
 
-		for obstacle in self.obstacles:
-			x1 = obstacle.x
-			y1 = obstacle.y
-			r = obstacle.radius
+				discriminant = b*b - 4*a*c
 
-			distance = abs((y2 - y1) * cx - (x2 - x1) * cy + x2 * y1 - y2 * x1) / math.sqrt((y2 - y1)**2 + (x2 - x1)**2)
-			
-			a = (1 + m*m)
-			b = (2*m*const - 2*x1 - 2*y1*m)
-			c = (x1*x1 + const*const + y1*y1 - 2*y1*const - r*r)
+				#print("a = "+str(a)+",b = "+str(b)+",c = "+str(c)+", discriminant = "+str(discriminant))
 
-			discriminant = round(b*b - 4*a*c, 1)
+				if discriminant < 0:
+					return False
+				
+				else:
+					# intersection points
+					x1 = round((-b + np.sqrt(discriminant))/float(2*a), 4)
+					y1 = round(m*x1 + const, 4)
 
-			#print("a = "+str(a)+",b = "+str(b)+",c = "+str(c)+", discriminant = "+str(discriminant))
+					# Check if the intersection points lie are within the line segment(not line)
+					if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
+						return True
 
-			# Check if discriminant is non-negative
-			if discriminant > 0:
-				# intersection points
-				x1 = (-b + np.sqrt(discriminant))/float(2*a)
-				y1 = m*x1 + const
+					x2 = round((-b - np.sqrt(discriminant))/float(2*a), 4)
+					y2 = round(m*x2 + const, 4)
 
-				# Check if the intersection points lie are within the line segment(not line)
-				if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
-					return True
+					if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
+						return True
+		
+		else:	# VERTICAL PATH
+			# m = infinity
+			# eqn of line : x = c (c is the common x coordinate)
+			for obstacle in self.obstacles:
+				x1 = obstacle.x
+				y1 = obstacle.y
+				r  = obstacle.radius + self.thresh_radius
+				
+				a = 1
+				b = -2*y1
+				c = y1*y1 + (pt1[0] - x1)*(pt1[0] - x1) - r*r
 
-				x2 = (-b - np.sqrt(discriminant))/float(2*a)
-				y2 = m*x2 + const
+				discriminant = b*b - 4*a*c
 
-				if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
-					return True
+				#print("a = "+str(a)+",b = "+str(b)+",c = "+str(c)+", discriminant = "+str(discriminant))
 
-			if discriminant == 0:
-				#plt.text((pt1[0] + pt2[0])/2.0, (pt1[1] + pt2[1])/2.0, "-->")
-				# tangent
-				x = -b/float(2*a)
-				y = m*x + const
+				if discriminant < 0:
+					return False
+				
+				else:
+					# intersection points
+					x1 = round(pt2[0], 4)
+					y1 = round((-b + np.sqrt(discriminant))/float(2*a), 4)
 
-				if min(pt1[0], pt2[0]) <= x <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y <= max(pt1[1], pt2[1]):
-					plt.text((pt1[0] + pt2[0])/2.0, (pt1[1] + pt2[1])/2.0, str(discriminant))
-					return True
+					# Check if the intersection points lie are within the line segment(not line)
+					if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
+						return True
+
+					x2 = round(pt2[0], 4)
+					y2 = round((-b - np.sqrt(discriminant))/float(2*a), 4)
+
+					if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
+						return True
 
 		return False
 
@@ -164,7 +186,7 @@ class PRM:
 				else: # (pt, nbr) pair doesn't exist in the edges dictionary
 					if not self.isIntersecting(pt, nbr):
 						self.edges[pt].append(nbr) # adding (pt, nbr) pair into the edges dictionary
-						#plt.text((pt[0] + nbr[0])/2.0, (pt[1] + nbr[1])/2.0, str(b))
+						#plt.text((pt[0] + nbr[0])/2.0, (pt[1] + nbr[1])/2.0, str(""))
 						plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='blue')
 					else: # STEP 2.2.2.2 : PATH IS COLLIDING WITH ONE OF THE OBSTACLES => DON'T ADD IT TO THE LIST
 						plt.plot([pt[0], nbr[0]], [pt[1], nbr[1]], color='red')
@@ -195,7 +217,7 @@ if __name__ == '__main__':
 	# print(prm.findKNearestNeigbors(prm.start, 5))
 	# Phase 2: Creating edges
 
-	N = 50
+	N = 60
 	K = 3
 	prm.runPRM(N, K)
 	plt.show()
