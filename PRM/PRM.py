@@ -109,15 +109,15 @@ class PRM:
 				
 				else:
 					# intersection points
-					x1 = round((-b + np.sqrt(discriminant))/float(2*a), 4)
-					y1 = round(m*x1 + const, 4)
+					x1 = (-b + np.sqrt(discriminant))/float(2*a)
+					y1 = m*x1 + const
 
 					# Check if the intersection points lie are within the line segment(not line)
 					if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
 						return True
 
-					x2 = round((-b - np.sqrt(discriminant))/float(2*a), 4)
-					y2 = round(m*x2 + const, 4)
+					x2 = (-b - np.sqrt(discriminant))/float(2*a)
+					y2 = m*x2 + const
 
 					if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
 						return True
@@ -143,19 +143,18 @@ class PRM:
 				
 				else:
 					# intersection points
-					x1 = round(pt2[0], 4)
-					y1 = round((-b + np.sqrt(discriminant))/float(2*a), 4)
+					x1 = pt2[0]
+					y1 = (-b + np.sqrt(discriminant))/float(2*a)
 
 					# Check if the intersection points lie are within the line segment(not line)
 					if min(pt1[0], pt2[0]) <= x1 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y1 <= max(pt1[1], pt2[1]):
 						return True
 
-					x2 = round(pt2[0], 4)
-					y2 = round((-b - np.sqrt(discriminant))/float(2*a), 4)
+					x2 = pt2[0]
+					y2 = (-b - np.sqrt(discriminant))/float(2*a)
 
 					if min(pt1[0], pt2[0]) <= x2 <= max(pt1[0], pt2[0]) and min(pt1[1], pt2[1]) <= y2 <= max(pt1[1], pt2[1]):
 						return True
-
 		return False
 
 	def runPRM(self, N, K):
@@ -217,7 +216,7 @@ if __name__ == '__main__':
 	# print(prm.findKNearestNeigbors(prm.start, 5))
 	# Phase 2: Creating edges
 
-	N = 60
+	N = 50
 	K = 3
 	prm.runPRM(N, K)
 	plt.show()
