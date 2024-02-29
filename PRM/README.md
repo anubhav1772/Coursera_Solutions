@@ -12,3 +12,5 @@ The [probabilistic roadmap](https://en.wikipedia.org/wiki/Probabilistic_roadmap)
 <img src="https://github.com/anubhav1772/Coursera_Solutions/blob/main/PRM/imgs/algorithm.png?raw=true" height="60%" width="60%"/>
 
 #### Results:
+
+<img src="https://github.com/anubhav1772/Coursera_Solutions/blob/main/PRM/imgs/Eight_Obstacles_test_result1.png?raw=true" height="60%" width="100%"/>
